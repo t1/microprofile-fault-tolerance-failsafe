@@ -150,6 +150,12 @@
             <version>1.1-SNAPSHOT</version>
             <scope>compile</scope>
         </dependency>
+        <dependency>
+            <groupId>net.jodah</groupId>
+            <artifactId>failsafe</artifactId>
+            <version>1.0.4</version>
+            <scope>compile</scope>
+        </dependency>
 
         <!-- test scope -->
         <dependency>
@@ -181,12 +187,6 @@
             <artifactId>javax.json</artifactId>
             <version>1.1</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>net.jodah</groupId>
-            <artifactId>failsafe</artifactId>
-            <version>1.0.4</version>
-            <!--<scope>test</scope>-->
         </dependency>
         <dependency>
             <groupId>ch.qos.logback</groupId>

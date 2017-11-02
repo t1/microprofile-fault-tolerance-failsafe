@@ -3,7 +3,7 @@ package com.github.t1.faulttolerance.failsafe;
 import com.github.t1.problem.ProblemDetail;
 import com.github.t1.testtools.WebArchiveBuilder;
 import io.dropwizard.testing.junit.DropwizardClientRule;
-import org.eclipse.microprofile.faulttolerance.Fallback;
+import net.jodah.failsafe.AccessibleSyncFailsafe;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.arquillian.test.api.ArquillianResource;
@@ -25,7 +25,8 @@ public class FaultToleranceIT {
     @Deployment(testable = false)
     public static WebArchive createDeployment() {
         return new WebArchiveBuilder("fault-tolerance-it.war")
-                .with(Fallback.class, RetryInterceptor.class)
+                .with(FailsafeInterceptor.class, RetryInterceptor.class, FallbackInterceptor.class,
+                        AccessibleSyncFailsafe.class)
                 .with(JaxRs.class, FooGateway.class, Gateway.class, FooBoundary.class)
                 .withBeansXml()
                 .library("com.github.t1", "problem-detail")
