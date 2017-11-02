@@ -1,9 +1,9 @@
 package com.github.t1.faulttolerance.failsafe;
 
-import com.github.t1.faulttolerance.Fallback;
 import com.github.t1.problem.ProblemDetail;
 import com.github.t1.testtools.WebArchiveBuilder;
 import io.dropwizard.testing.junit.DropwizardClientRule;
+import org.eclipse.microprofile.faulttolerance.Fallback;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.arquillian.test.api.ArquillianResource;
@@ -25,14 +25,13 @@ public class FaultToleranceIT {
     @Deployment(testable = false)
     public static WebArchive createDeployment() {
         return new WebArchiveBuilder("fault-tolerance-it.war")
-                .with(Fallback.class, SafeInterceptor.class, Safe.class)
+                .with(Fallback.class, RetryInterceptor.class)
                 .with(JaxRs.class, FooGateway.class, Gateway.class, FooBoundary.class)
                 .withBeansXml()
                 .library("com.github.t1", "problem-detail")
                 .library("com.github.t1", "stereotype-helper")
                 .library("net.jodah", "failsafe")
-                .library("org.eclipse.microprofile.faulttolerance.incubation",
-                        "org.eclipse.microprofile.fautltolerance.api")
+                .library("org.eclipse.microprofile.fault-tolerance", "microprofile-fault-tolerance-api")
                 .print().build();
     }
 
@@ -73,7 +72,7 @@ public class FaultToleranceIT {
     private String remoteUri() { return remote.baseUri() + "/"; }
 
     @Test
-    public void shouldStartClosed() throws Exception {
+    public void shouldStartClosed() {
         RemoteMock.mockResponse = "foo";
 
         Response response = GET();
@@ -83,7 +82,7 @@ public class FaultToleranceIT {
     }
 
     @Test
-    public void shouldNotRetry() throws Exception {
+    public void shouldNotRetry() {
         Response response = GET();
 
         assertThat(RemoteMock.mockCallCount).isEqualTo(1);
@@ -94,7 +93,7 @@ public class FaultToleranceIT {
     }
 
     @Test
-    public void shouldRetryOnce() throws Exception {
+    public void shouldRetryOnce() {
         Response response = GET(target -> target.queryParam("retryOnce", true));
 
         assertThat(RemoteMock.mockCallCount).isEqualTo(2);
@@ -105,7 +104,7 @@ public class FaultToleranceIT {
     }
 
     @Test
-    public void shouldFallBack() throws Exception {
+    public void shouldFallBack() {
         Response response = GET(target -> target.queryParam("fallback", "bar"));
 
         assertThat(response.getStatusInfo()).isEqualTo(OK);

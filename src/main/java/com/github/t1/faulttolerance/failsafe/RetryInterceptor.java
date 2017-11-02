@@ -1,28 +1,24 @@
 package com.github.t1.faulttolerance.failsafe;
 
-import com.github.t1.faulttolerance.Fallback;
 import com.github.t1.stereotypes.Annotations;
 import net.jodah.failsafe.*;
 import net.jodah.failsafe.function.CheckedFunction;
-import org.eclipse.microprofile.fault.tolerance.inject.Retry;
+import org.eclipse.microprofile.faulttolerance.*;
 
 import javax.annotation.Priority;
-import javax.enterprise.context.Dependent;
 import javax.interceptor.*;
 import java.lang.reflect.*;
 
 import static javax.interceptor.Interceptor.Priority.*;
 
-@Safe
-@Dependent
+@Retry
 @Interceptor
 @Priority(PLATFORM_AFTER)
-public class SafeInterceptor {
-    @AroundInvoke public Object intercept(InvocationContext context) throws Exception {
+public class RetryInterceptor {
+    @AroundInvoke public Object intercept(InvocationContext context) {
         AnnotatedElement annotations = Annotations.on(context.getMethod());
-        Integer retries = annotations.isAnnotationPresent(Retry.class)
-                ? annotations.getAnnotation(Retry.class).maxRetries()
-                : 0;
+        assert annotations.isAnnotationPresent(Retry.class);
+        Integer retries = annotations.getAnnotation(Retry.class).maxRetries();
         RetryPolicy policy = new RetryPolicy().withMaxRetries(retries);
         SyncFailsafe<Object> failsafe = Failsafe.with(policy);
         if (annotations.isAnnotationPresent(Fallback.class))
@@ -32,7 +28,7 @@ public class SafeInterceptor {
 
 
     private CheckedFunction<? extends Throwable, ?> findFallback(Fallback annotation, InvocationContext context) {
-        String methodName = annotation.value();
+        String methodName = annotation.fallbackMethod();
         Class<?> targetClass = context.getTarget().getClass();
         Class<?>[] parameters = { Throwable.class }; // getTypes(context.getParameters());
         try {

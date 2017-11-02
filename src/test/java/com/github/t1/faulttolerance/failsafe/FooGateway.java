@@ -1,8 +1,7 @@
 package com.github.t1.faulttolerance.failsafe;
 
-import com.github.t1.faulttolerance.Fallback;
 import lombok.extern.slf4j.Slf4j;
-import org.eclipse.microprofile.fault.tolerance.inject.Retry;
+import org.eclipse.microprofile.faulttolerance.*;
 
 import javax.ws.rs.*;
 import javax.ws.rs.client.*;
@@ -22,7 +21,7 @@ public class FooGateway {
     @Retry(maxRetries = 1)
     public String runWithOneRetry(URI uri) { return run(uri); }
 
-    @Fallback("fallback")
+    @Fallback(fallbackMethod = "fallback")
     public String run(URI uri) {
         log.debug("call number " + ++callNumber + " to " + uri);
         try {
