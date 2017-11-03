@@ -1,7 +1,7 @@
 package com.github.t1.faulttolerance.failsafe;
 
 import com.github.t1.problem.ProblemDetail;
-import com.github.t1.testtools.WebArchiveBuilder;
+import com.github.t1.testtools.*;
 import io.dropwizard.testing.junit.DropwizardClientRule;
 import net.jodah.failsafe.AccessibleSyncFailsafe;
 import org.jboss.arquillian.container.test.api.Deployment;
@@ -15,6 +15,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.client.*;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.util.UUID;
 import java.util.function.Function;
 
 import static javax.ws.rs.core.Response.Status.*;
@@ -31,6 +32,7 @@ public class FaultToleranceIT {
                 .withBeansXml()
                 .library("com.github.t1", "problem-detail")
                 .library("com.github.t1", "stereotype-helper")
+                .library("com.github.t1", "logging-interceptor")
                 .library("net.jodah", "failsafe")
                 .library("org.eclipse.microprofile.fault-tolerance", "microprofile-fault-tolerance-api")
                 .print().build();
@@ -57,14 +59,18 @@ public class FaultToleranceIT {
 
     @ClassRule public static final DropwizardClientRule remote = new DropwizardClientRule(RemoteMock.class);
 
+    @Rule public final TestLoggerRule log = new TestLoggerRule();
+
     private final Client client = ClientBuilder.newClient();
 
     @ArquillianResource private URI baseUri;
 
+    private final UUID requestId = UUID.randomUUID();
+
     private Response GET() { return GET(null); }
 
     private Response GET(Function<WebTarget, WebTarget> function) {
-        WebTarget webTarget = client.target(baseUri).queryParam("uri", remoteUri());
+        WebTarget webTarget = client.target(baseUri).queryParam("uri", remoteUri()).queryParam("request-id", requestId);
         if (function != null)
             webTarget = function.apply(webTarget);
         return webTarget.request().get();
@@ -105,10 +111,26 @@ public class FaultToleranceIT {
     }
 
     @Test
-    public void shouldFallBack() {
-        Response response = GET(target -> target.queryParam("fallback", "bar"));
+    public void shouldFallBackToMethod() {
+        Response response = GET(target -> target.path("/fallback-method"));
 
         assertThat(response.getStatusInfo()).isEqualTo(OK);
-        assertThat(response.readEntity(String.class)).isEqualTo("bar");
+        assertThat(response.readEntity(String.class)).isEqualTo("fallback-method-" + requestId);
+    }
+
+    @Test
+    public void shouldFallBackToNestedHandler() {
+        Response response = GET(target -> target.path("/nested-fallback-handler"));
+
+        assertThat(response.getStatusInfo()).isEqualTo(OK);
+        assertThat(response.readEntity(String.class)).isEqualTo("nested-fallback-handler-" + requestId);
+    }
+
+    @Test
+    public void shouldFallBackToInnerHandler() {
+        Response response = GET(target -> target.path("/inner-fallback-handler"));
+
+        assertThat(response.getStatusInfo()).isEqualTo(OK);
+        assertThat(response.readEntity(String.class)).isEqualTo("inner-fallback-handler-" + requestId);
     }
 }
