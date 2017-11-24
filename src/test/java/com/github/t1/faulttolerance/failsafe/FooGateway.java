@@ -1,8 +1,9 @@
 package com.github.t1.faulttolerance.failsafe;
 
-import lombok.extern.slf4j.Slf4j;
 import org.eclipse.microprofile.faulttolerance.*;
+import org.slf4j.*;
 
+import javax.enterprise.inject.Produces;
 import javax.ws.rs.*;
 import javax.ws.rs.client.*;
 import java.net.URI;
@@ -10,44 +11,60 @@ import java.net.URI;
 import static com.github.t1.problem.WebException.*;
 import static javax.ws.rs.core.Response.Status.*;
 
-@Slf4j
 @Gateway
 public class FooGateway {
+    public static final Logger log = LoggerFactory.getLogger(FooGateway.class);
+
     private final Client client = ClientBuilder.newClient();
 
     int callNumber;
 
+
     @Retry(maxRetries = 1)
     public String runWithOneRetry(URI uri) { return run(uri); }
+
 
     @Fallback(fallbackMethod = "fallback")
     public String runWithFallbackMethod(URI uri) { return run(uri); }
 
-    @SuppressWarnings("unused") public String fallback(Throwable e) {
+    @SuppressWarnings("unused") public String fallback() {
+        log.info("fallback-method");
         return "fallback-method-" + FooBoundary.requestId;
     }
+
 
     @Fallback(InnerFallbackHandler.class)
     public String runWithInnerFallbackHandler(URI uri) { return run(uri); }
 
+    @Produces InnerFallbackHandler produceInnerFallbackHandler() { return new InnerFallbackHandler(); }
+
     private class InnerFallbackHandler implements FallbackHandler<String> {
         @Override public String handle(ExecutionContext context) {
-            return "inner-fallback-handler-"
-                    + FooBoundary.requestId;
+            log.info("inner-fallback");
+            return "inner-fallback-handler-" + FooBoundary.requestId;
         }
     }
+
 
     @Fallback(NestedFallbackHandler.class)
     public String runWithNestedFallbackHandler(URI uri) { return run(uri); }
 
     private static class NestedFallbackHandler implements FallbackHandler<String> {
         @Override public String handle(ExecutionContext context) {
+            log.info("nested-fallback");
             return "nested-fallback-handler-" + FooBoundary.requestId;
         }
     }
 
+
+    @Timeout(100)
+    public String runWithTimeout(URI uri) {
+        return run(uri);
+    }
+
+
     public String run(URI uri) {
-        log.debug("call number " + ++callNumber + " to " + uri);
+        log.info("call #" + ++callNumber + " to " + uri);
         try {
             return client.target(uri).request().get(String.class);
         } catch (RedirectionException e) { // ugly, but JAX-RS doesn't define redirect handling

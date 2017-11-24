@@ -8,6 +8,6 @@ import java.lang.annotation.Retention;
 import static java.lang.annotation.RetentionPolicy.*;
 
 @Stereotype
-@Retry(maxRetries = 0)
+@Retry(maxRetries = 2)
 @Retention(RUNTIME)
 public @interface Gateway {}
